@@ -6,6 +6,8 @@ use App\Http\Middleware\RoleMiddleware;
 
 require __DIR__.'/api/auth.php';
 require __DIR__.'/api/employee.php';
+require __DIR__ . '/api/leaves.php';
+require __DIR__ . '/api/Teams.php';
 
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

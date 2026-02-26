@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Auth\Employee\EmployeeController;
+use App\Http\Controllers\Api\Employee\EmployeeController;
 
 Route::prefix('employee')->group(function () {
 
