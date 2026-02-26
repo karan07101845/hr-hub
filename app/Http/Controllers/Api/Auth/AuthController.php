@@ -6,7 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+
+
 
 class AuthController extends Controller
 {
@@ -77,58 +78,49 @@ class AuthController extends Controller
         ], 201);
     }
 
-    /**
-     * Login User
-     */
     public function login(Request $request)
     {
+
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required|string'
+            'password' => 'required'
+
         ]);
-
-        $user = User::where('email', $request->email)->first();
-
-        // Secure login check (prevents user enumeration)
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Invalid credentials']
-            ]);
+        $user = User::where('email',$request->email)->first();
+        // $user = User::all();
+        // return  $user;
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User Not Found'
+            ], 401);
         }
+        if (!Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Incorrect Password'
+            ], 401);
+        }
+        if ($user) {
+            $token = $user->createToken(name: 'auth_token')->plainTextToken;
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+            return response()->json([
+                'success' => true,
+                'message' => 'Login Successfully',
+                'token' => $token
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
-            'token' => $token,
-            'user' => $user
-        ], 200);
+            ], 200);
+        }
     }
 
-    /**
-     * Logout User (Single Device)
-     */
     public function logout(Request $request)
     {
+
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
             'success' => true,
             'message' => 'Logged out successfully'
-        ]);
-    }
-
-    /**
-     * Logout From All Devices (Optional)
-     */
-    public function logoutAll(Request $request)
-    {
-        $request->user()->tokens()->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Logged out from all devices successfully'
         ]);
     }
 }

@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\SoftDeletes; 
+
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasFactory, Notifiable, HasApiTokens, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -31,8 +33,16 @@ class User extends Authenticatable
         'training_experience',
         'previous_company_name',
         'previous_designation',
-        'previous_company_duration'
+        'previous_company_duration',
+        'document'
     ];
+
+        protected $dates = ['deleted_at'];
+
+        protected $casts = [
+    'document' => 'array',
+];
+
 
     protected $hidden = [
         'password',
@@ -47,6 +57,19 @@ class User extends Authenticatable
             'joining_date' => 'date',
             'years_of_experience' => 'integer',
             'previous_company_duration' => 'integer',
+             'deleted_at' => 'datetime', 
+
         ];
+    }
+
+
+    public function manager()
+    {
+        return $this->belongsTo(User::class, 'manager_id');
+    }
+
+    public function employees()
+    {
+        return $this->hasMany(User::class, 'manager_id');
     }
 }
