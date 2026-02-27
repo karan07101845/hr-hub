@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
+use Nette\Utils\Json;
+use Illuminate\Support\Str;
 
 
 class EmployeeController extends Controller
@@ -32,7 +34,7 @@ class EmployeeController extends Controller
                 'image' => '<img src="' . asset('storage/' . $user->image) . '" width="50" class="rounded-circle" />',
                 'role' => $user->role,
                 'created_at' => $user->created_at->format('d-m-Y'),
-              
+
             ];
         });
 
@@ -48,10 +50,10 @@ class EmployeeController extends Controller
 
 
     //UPDATE DATA
-  public function updateEmployee(Request $request, $id)
+    public function updateEmployee(Request $request, $id)
     {
         $user = User::findOrFail($id);
-// dd("ftyfj");
+        // dd("ftyfj");
         // Validation
         $validated = $request->validate([
             // Basic Information
@@ -85,14 +87,14 @@ class EmployeeController extends Controller
             'previous_designation' => 'nullable|string|max:255',
             'previous_company_duration' => 'nullable|numeric|min:0|max:70',
         ]);
-    
+
         // Handle password
         if (!empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         } else {
             unset($validated['password']); // keep existing password
         }
-        
+
 
         // Handle image upload
         if ($request->hasFile('image')) {
@@ -107,15 +109,15 @@ class EmployeeController extends Controller
         $user->save();
 
         // Sync manager relation if employee
-      // Set manager only if role is employee
-if ($validated['role'] === 'employee') {
-    $user->manager_id = $validated['manager_id'] ?? null;
-} else {
-    // If not employee, remove manager
-    $user->manager_id = null;
-}
+        // Set manager only if role is employee
+        if ($validated['role'] === 'employee') {
+            $user->manager_id = $validated['manager_id'] ?? null;
+        } else {
+            // If not employee, remove manager
+            $user->manager_id = null;
+        }
 
-$user->save();
+        $user->save();
 
 
         return response()->json([
@@ -127,7 +129,7 @@ $user->save();
 
 
     //DELETE EMPLOYEEE
-        public function deleteEmployee($id)
+    public function deleteEmployee($id)
     {
         $user = User::find($id);
         if (!$user)
@@ -139,99 +141,99 @@ $user->save();
 
     //softdelete
 
-      public function softDeleteEmployee($id)
-{
-    $user = \App\Models\User::find($id);
+    public function softDeleteEmployee($id)
+    {
+        $user = \App\Models\User::find($id);
 
-    if (!$user) {
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee not found.'
+            ], 404);
+        }
+
+        if ($user->trashed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee already soft deleted.'
+            ], 400);
+        }
+
+        $user->delete(); // Soft delete
+
         return response()->json([
-            'success' => false,
-            'message' => 'Employee not found.'
-        ], 404);
+            'success' => true,
+            'message' => 'Employee soft deleted successfully.'
+        ]);
     }
 
-    if ($user->trashed()) {
+
+    //GETSOFTDELETE
+
+    public function getSoftDeletedEmployees()
+    {
+        // Get only soft deleted employees
+        $deletedEmployees = User::onlyTrashed()->get();
+
+        // Map the data to a clean JSON structure
+        $data = $deletedEmployees->map(function ($user) {
+            return [
+                'id' => $user->id,
+                'name' => $user->name,
+                'emp_code' => $user->emp_code,
+                'image_url' => $user->image ? url('storage/img/' . $user->image) : null, // image URL
+                'role' => $user->role,
+                'deleted_at' => $user->deleted_at ? $user->deleted_at->format('Y-m-d H:i:s') : null,
+            ];
+        });
+
         return response()->json([
-            'success' => false,
-            'message' => 'Employee already soft deleted.'
-        ], 400);
+            'success' => true,
+            'message' => 'Soft deleted employees fetched successfully',
+            'data' => $data,
+        ], 200);
     }
-
-    $user->delete(); // Soft delete
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Employee soft deleted successfully.'
-    ]);
-}
-
-
-//GETSOFTDELETE
-
-public function getSoftDeletedEmployees()
-{
-    // Get only soft deleted employees
-    $deletedEmployees = User::onlyTrashed()->get();
-
-    // Map the data to a clean JSON structure
-    $data = $deletedEmployees->map(function ($user) {
-        return [
-            'id' => $user->id,
-            'name' => $user->name,
-            'emp_code' => $user->emp_code,
-            'image_url' => $user->image ? url('storage/img/' . $user->image) : null, // image URL
-            'role' => $user->role,
-            'deleted_at' => $user->deleted_at ? $user->deleted_at->format('Y-m-d H:i:s') : null,
-        ];
-    });
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Soft deleted employees fetched successfully',
-        'data' => $data,
-    ], 200);
-}
 
 
 
     //RESTORE DATA
 
-public function restoreEmployee($id)
-{
-    $user = \App\Models\User::withTrashed()->find($id);
+    public function restoreEmployee($id)
+    {
+        $user = \App\Models\User::withTrashed()->find($id);
 
-    if (!$user) {
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee not found.'
+            ], 404);
+        }
+
+        if (!$user->trashed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee is not deleted.'
+            ], 400);
+        }
+
+        $user->restore(); // Restore soft deleted user
+
         return response()->json([
-            'success' => false,
-            'message' => 'Employee not found.'
-        ], 404);
+            'success' => true,
+            'message' => 'Employee restored successfully.'
+        ]);
     }
 
-    if (!$user->trashed()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Employee is not deleted.'
-        ], 400);
-    }
+    //PERMANENT DELETE
 
-    $user->restore(); // Restore soft deleted user
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Employee restored successfully.'
-    ]);
-}
-
-//PERMANENT DELETE
-
-  public function permanentDeleteEmployee($id)
+    public function permanentDeleteEmployee($id)
     {
         $user = User::onlyTrashed()->findOrFail($id);
         $user->forceDelete();
 
         return response()->json(['message' => 'Employee permanently deleted successfully.']);
     }
-//GetAllemployees
+    //GetAllemployees
 
     public function getAllEmployees()
     {
@@ -243,7 +245,7 @@ public function restoreEmployee($id)
 
     //BulkUpdateEmployee
 
-       public function bulkUpdateRoles(Request $request)
+    public function bulkUpdateRoles(Request $request)
     {
 
 
@@ -277,4 +279,131 @@ public function restoreEmployee($id)
         ]);
     }
 
+
+    //document
+
+    public function upload(Request $request, $id)
+    {
+        // Validate uploaded files
+        // dd($request->file('documents'));
+        $validated = $request->validate([
+            'documents' => 'nullable|array',
+            'documents.*' => 'file|mimes:pdf,doc,docx,jpg,png|max:5120',
+        ], [
+            'documents.*.mimes' => 'Only PDF, DOC, DOCX, JPG, and PNG files are allowed.',
+            'documents.*.max' => 'Each document must not exceed 5MB.',
+        ]);
+        // dd('tessst');
+
+        // Find the employee
+        $employee = User::findOrFail($id);
+        // Initialize array to hold file info
+        $filesData = $employee->document ?? []; // keep old files if any
+
+        if ($request->hasFile('documents')) {
+
+            foreach ($request->file('documents') as $file) {
+
+                // Store file in storage/app/public/employee-documents
+                $path = $file->store('employee-documents', 'public');
+                // dd($path);
+                // Add file info to array
+                $filesData[] = [
+                    'doc_id' => rand(10000, 99999), // generates a 5-digit number
+                    'file_path' => $path,
+                    'original_name' => $file->getClientOriginalName(),
+                    'file_type' => $file->getClientMimeType(),
+                ];
+            }
+
+            // Store structured JSON in DB
+            $employee->document = $filesData;
+        }
+
+        $employee->save();
+        return response()->json([
+            'success' => true,
+            'message' => 'Documents uploaded successfully.',
+            'documents' => $employee->document,
+        ]);
+    }
+
+
+    //getDocuments
+
+    public function getDocuments($id)
+    {
+        $user = User::findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'documents' => $user->document ?? []
+        ]);
+    }
+
+
+    //DownloadDocument
+public function downloadDocument($userId, $docId)
+{
+    $user = User::findOrFail($userId);
+
+    $documents = $user->document ?? [];
+
+    // Find document by doc_id
+    $key = array_search($docId, array_column($documents, 'doc_id'));
+
+    if ($key === false) {
+        return response()->json([
+            'message' => 'Document not found'
+        ], 404);
+    }
+
+    $file = $documents[$key];
+    $path = storage_path('app/public/' . $file['file_path']);
+
+    if (!file_exists($path)) {
+        return response()->json([
+            'message' => 'File not found on server'
+        ], 404);
+    }
+
+    return response()->download($path, $file['original_name']);
+}
+
+    //DeleteDocument
+public function deleteDocument($userId, $docId)
+{
+    $user = User::findOrFail($userId);
+
+    $documents = $user->document ?? [];
+
+    // Find the document by doc_id
+    $key = array_search($docId, array_column($documents, 'doc_id'));
+
+    if ($key === false) {
+        return response()->json([
+            'message' => 'Document not found'
+        ], 404);
+    }
+
+    $file = $documents[$key];
+    $path = storage_path('app/public/' . $file['file_path']);
+
+    // Delete file from storage
+    if (file_exists($path)) {
+        unlink($path);
+    }
+
+    // Remove from array
+    array_splice($documents, $key, 1);
+
+    // Save updated documents
+    $user->document = $documents;
+    $user->save();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Document deleted successfully.'
+    ]);
+}
 }
