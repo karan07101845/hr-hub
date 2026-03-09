@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\API\Leaves;
+namespace App\Http\Controllers\Api\Leaves;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;

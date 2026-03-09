@@ -7,6 +7,11 @@ Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::middleware('auth:sanctum')->put('/update', [AuthController::class, 'updatePassword']);
+
+Route::post('/forgot', [AuthController::class, 'forgotPassword']);
+Route::post('/reset', [AuthController::class, 'resetPassword']);
+
 });
 
 Route::post('/test/{id}',[AuthController::class,'register']);

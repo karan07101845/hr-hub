@@ -15,7 +15,7 @@ Route::middleware(['auth:sanctum'])->prefix('teams')->group(function () {
     Route::get('/', [TeamsController::class, 'index']);
 
     // Create team
-    Route::post('/create', [TeamsController::class, 'store']);
+    Route::post('/', [TeamsController::class, 'store']);
 
     // Get single team
     Route::get('/{id}', [TeamsController::class, 'show']);

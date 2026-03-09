@@ -1,9 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\API\Leaves\LeavesController;
+use App\Http\Controllers\Api\Leaves\LeavesController;
 
-Route::middleware(['auth:sanctum'])->prefix('leaves')->group(function () {
+Route::middleware( ['auth:sanctum'])->prefix('leaves')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
