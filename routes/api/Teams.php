@@ -25,4 +25,7 @@ Route::middleware(['auth:sanctum'])->prefix('teams')->group(function () {
 
     // Delete team
     Route::delete('/delete/{id}', [TeamsController::class, 'destroy']);
+
+    // Assign members to a team.
+    Route::post('/add-members/{id}', [TeamsController::class, 'addMembers']);
 });

@@ -166,4 +166,24 @@ class TeamsController extends Controller
             'message' => 'Team deleted successfully'
         ]);
     }
+       
+    // Assign member to a Team
+
+    public function addMembers(Request $request, $id)
+    {
+        $request->validate([
+            'members' => 'required|array',
+            'members.*' => 'exists:users,id'
+        ]);
+
+        $team = Teams::findOrFail($id);
+
+        User::whereIn('id', $request->members)
+            ->update(['team_id' => $team->id]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Members added to team successfully'
+        ]);
+    }
 }

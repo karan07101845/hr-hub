@@ -8,10 +8,7 @@ require __DIR__.'/api/auth.php';
 require __DIR__.'/api/employee.php';
 require __DIR__ . '/api/leaves.php';
 require __DIR__ . '/api/Teams.php';
-require __DIR__ . '/api/notice.php';
-require __DIR__ . '/api/admin.php';
-
-
+require __DIR__ . '/api/attendances.php';
 
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

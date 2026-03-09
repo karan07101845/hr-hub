@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Database\Eloquent\SoftDeletes; 
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 
 class User extends Authenticatable
@@ -37,11 +37,11 @@ class User extends Authenticatable
         'document'
     ];
 
-        protected $dates = ['deleted_at'];
+    protected $dates = ['deleted_at'];
 
-        protected $casts = [
-    'document' => 'array',
-];
+    protected $casts = [
+        'document' => 'array',
+    ];
 
 
     protected $hidden = [
@@ -57,7 +57,7 @@ class User extends Authenticatable
             'joining_date' => 'date',
             'years_of_experience' => 'integer',
             'previous_company_duration' => 'integer',
-             'deleted_at' => 'datetime', 
+            'deleted_at' => 'datetime',
 
         ];
     }
@@ -71,5 +71,10 @@ class User extends Authenticatable
     public function employees()
     {
         return $this->hasMany(User::class, 'manager_id');
+    }
+
+    public function team()
+    {
+        return $this->belongsTo(Teams::class, 'team_id');
     }
 }

@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Leaves;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 
 class LeavesController extends Controller
 {
+
     /**
-     * Apply Leave
+     * Apply Leave (Employee)
      */
     public function apply(Request $request)
     {
@@ -40,7 +42,6 @@ class LeavesController extends Controller
                 'message' => 'Leave request sent successfully.',
                 'data'    => $leave
             ], 201);
-
         } catch (\Exception $e) {
 
             return response()->json([
@@ -51,8 +52,9 @@ class LeavesController extends Controller
         }
     }
 
+
     /**
-     * Get My Leaves
+     * Get Logged-in User Leaves
      */
     public function myLeaves()
     {
@@ -62,27 +64,95 @@ class LeavesController extends Controller
 
         return response()->json([
             'success' => true,
-            'data'    => $leaves
+            'data' => $leaves
         ]);
     }
 
+
     /**
-     * Get All Leaves (For Manager / Admin / Team Leader)
+     * Get All Leaves (Admin / Manager / Team Leader)
+     * Supports status filtering
      */
-    public function allLeaves()
+    public function allLeaves(Request $request)
     {
-        $leaves = Leaves::with('user')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $user = Auth::user();
+
+        $query = Leaves::with(['user', 'manager', 'approver'])
+            ->orderBy('created_at', 'desc');
+
+        // ROLE BASED FILTER
+        if ($user->role === 'admin') {
+            // Admin can see all leaves
+        } elseif ($user->role === 'manager') {
+
+            $teamMembers = User::where('team_id', $user->team_id)->pluck('id');
+
+            $query->whereIn('user_id', $teamMembers);
+        } elseif ($user->role === 'team_leader') {
+
+            $teamMembers = User::where('team_id', $user->team_id)
+                ->where('role', 'employee')
+                ->pluck('id');
+
+            $query->whereIn('user_id', $teamMembers);
+        } else {
+
+            // Employee only their own leaves
+            $query->where('user_id', $user->id);
+        }
+
+        // STATUS FILTER
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $leaves = $query->get();
 
         return response()->json([
             'success' => true,
-            'data'    => $leaves
+            'data' => $leaves
+        ]);
+    }
+
+
+    /**
+     * Dashboard Summary Counts
+     * Used for Admin Dashboard Buttons
+     */
+    public function summary()
+    {
+        $user = Auth::user();
+
+        $query = Leaves::query();
+
+        if ($user->role === 'manager') {
+
+            $teamMembers = User::where('team_id', $user->team_id)->pluck('id');
+
+            $query->whereIn('user_id', $teamMembers);
+        } elseif ($user->role === 'team_leader') {
+
+            $teamMembers = User::where('team_id', $user->team_id)
+                ->where('role', 'employee')
+                ->pluck('id');
+            $query->whereIn('user_id', $teamMembers);
+        } elseif ($user->role === 'employee') {
+            $query->where('user_id', $user->id);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'all'      => $query->count(),
+                'pending'  => (clone $query)->where('status', 'pending')->count(),
+                'approved' => (clone $query)->where('status', 'approved')->count(),
+                'rejected' => (clone $query)->where('status', 'rejected')->count(),
+            ]
         ]);
     }
 
     /**
-     * Approve / Reject Leave
+     * Approve / Reject Leave (Admin / Manager)
      */
     public function updateStatus(Request $request, $id)
     {
@@ -90,6 +160,8 @@ class LeavesController extends Controller
             'status'  => 'required|in:approved,rejected',
             'remarks' => 'nullable|string'
         ]);
+
+        $user = Auth::user();
 
         $leave = Leaves::find($id);
 
@@ -100,10 +172,30 @@ class LeavesController extends Controller
             ], 404);
         }
 
+        // ROLE CHECK
+        if ($user->role === 'admin') {
+
+            // admin can approve any leave
+        } elseif ($user->role === 'manager') {
+
+            if ($leave->manager_id !== $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You can only approve your team leaves.'
+                ], 403);
+            }
+        } else {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized action.'
+            ], 403);
+        }
+
         $leave->update([
             'status'      => $request->status,
             'remarks'     => $request->remarks,
-            'approved_by' => Auth::id()
+            'approved_by' => $user->id
         ]);
 
         return response()->json([
@@ -113,8 +205,9 @@ class LeavesController extends Controller
         ]);
     }
 
+
     /**
-     * Delete Leave (Optional)
+     * Delete Leave
      */
     public function destroy($id)
     {
@@ -125,6 +218,15 @@ class LeavesController extends Controller
                 'success' => false,
                 'message' => 'Leave not found.'
             ], 404);
+        }
+
+        $user = Auth::user();
+
+        if ($user->role !== 'admin' && $leave->user_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot delete this leave.'
+            ], 403);
         }
 
         $leave->delete();

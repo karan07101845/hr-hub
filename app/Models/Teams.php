@@ -21,4 +21,9 @@ class Teams extends Model
     {
         return $this->belongsTo(User::class, 'manager_id');
     }
+
+    public function members()
+    {
+        return $this->hasMany(User::class, 'team_id');
+    }
 }
