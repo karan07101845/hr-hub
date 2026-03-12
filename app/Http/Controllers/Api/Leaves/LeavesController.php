@@ -92,7 +92,8 @@ class LeavesController extends Controller
 
             $teamMembers = User::where('team_id', $user->team_id)
                 ->where('role', 'employee')
-                ->pluck('id');
+                ->pluck('id')
+                ->push($user->id);
 
             $query->whereIn('user_id', $teamMembers);
         } else {
@@ -134,7 +135,9 @@ class LeavesController extends Controller
 
             $teamMembers = User::where('team_id', $user->team_id)
                 ->where('role', 'employee')
-                ->pluck('id');
+                ->pluck('id')
+                ->push($user->id); // include team leader's own leaves
+
             $query->whereIn('user_id', $teamMembers);
         } elseif ($user->role === 'employee') {
             $query->where('user_id', $user->id);

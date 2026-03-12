@@ -9,6 +9,14 @@ require __DIR__.'/api/employee.php';
 require __DIR__ . '/api/leaves.php';
 require __DIR__ . '/api/Teams.php';
 require __DIR__ . '/api/attendances.php';
+require __DIR__ . '/api/notice.php';
+require __DIR__ . '/api/admin.php';
+require __DIR__ . '/api/EmployeeDashboard.php';
+require __DIR__ . '/api/TeamLeaderDashboard.php';
+require __DIR__ . '/api/notification.php';
+require __DIR__ . '/api/manager.php';
+
+
 
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
@@ -16,26 +24,3 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 
-// Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
-
-// Route::prefix('auth')->group(function () {
-
-//     Route::post('/register', [AuthController::class, 'register']);
-
-    
-//     Route::post('/login', [AuthController::class, 'login']);
-// });
-// Route::middleware([
-//     'auth:sanctum',
-//     'role:admin'
-// ])->group(function () {
-
-//     Route::get('/dashboard', function () {
-//         return response()->json(['message' => 'Welcome to Dashboard']);
-//     });
-
-//     Route::get('/profile', function () {
-//         return response()->json(['message' => 'User Profile']);
-//     });
-
-// });

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\Employee;
 
+use Illuminate\Support\Facades\Auth;
+
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Teams;
@@ -14,7 +16,24 @@ class TeamsController extends Controller
      */
     public function index()
     {
-        $teams = Teams::with('manager')->get();
+        $user = Auth::user();
+
+        if ($user->role === 'admin') {
+            $teams = Teams::with('manager')->get();
+        } elseif ($user->role === 'manager') {
+            $teams = Teams::with('manager')
+                ->where('manager_id', $user->id)
+                ->get();
+        } elseif ($user->role === 'team_leader') {
+            $teams = Teams::whereJsonContains('team_leaders', $user->id)
+                ->with('manager')
+                ->get();
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
 
         return response()->json([
             'success' => true,
@@ -33,6 +52,15 @@ class TeamsController extends Controller
             'manager_id' => 'nullable|exists:users,id',
             'team_leaders' => 'nullable|array'
         ]);
+
+        $user = Auth::user();
+
+        if ($user->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only admin can create teams'
+            ], 403);
+        }
 
         $leaders = $request->team_leaders ?? [];
 
@@ -84,7 +112,22 @@ class TeamsController extends Controller
      */
     public function show($id)
     {
+        $user = Auth::user();
         $team = Teams::with('manager')->findOrFail($id);
+
+        if ($user->role === 'manager' && $team->manager_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You can only view your own team'
+            ], 403);
+        }
+
+        if ($user->role === 'team_leader' && !in_array($user->id, $team->team_leaders ?? [])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
 
         return response()->json([
             'success' => true,
@@ -97,6 +140,15 @@ class TeamsController extends Controller
      */
     public function update(Request $request, $id)
     {
+
+        $user = Auth::user();
+
+        if ($user->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only admin can update teams'
+            ], 403);
+        }
         $team = Teams::findOrFail($id);
 
         $request->validate([
@@ -158,6 +210,14 @@ class TeamsController extends Controller
      */
     public function destroy($id)
     {
+        $user = Auth::user();
+
+        if ($user->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only admin can delete teams'
+            ], 403);
+        }
         $team = Teams::findOrFail($id);
         $team->delete();
 
@@ -166,7 +226,7 @@ class TeamsController extends Controller
             'message' => 'Team deleted successfully'
         ]);
     }
-       
+
     // Assign member to a Team
 
     public function addMembers(Request $request, $id)
@@ -176,10 +236,36 @@ class TeamsController extends Controller
             'members.*' => 'exists:users,id'
         ]);
 
+        $user = Auth::user();
+
+        if (!in_array($user->role, ['admin', 'manager'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized to add members'
+            ], 403);
+        }
+
         $team = Teams::findOrFail($id);
 
-        User::whereIn('id', $request->members)
-            ->update(['team_id' => $team->id]);
+        if ($user->role === 'manager' && $team->manager_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You can only manage your own team'
+            ], 403);
+        }
+
+        $members = User::whereIn('id', $request->members)
+            ->where('role', 'employee')
+            ->pluck('id');
+
+        if ($members->count() !== count($request->members)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only employees can be added as team members'
+            ], 422);
+        }
+
+        User::whereIn('id', $members)->update(['team_id' => $team->id]);
 
         return response()->json([
             'success' => true,

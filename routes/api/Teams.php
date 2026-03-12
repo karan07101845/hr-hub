@@ -3,29 +3,29 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\Employee\TeamsController;
 
-/*
-|--------------------------------------------------------------------------
-| Team Routes
-|--------------------------------------------------------------------------
-*/
-
 Route::middleware(['auth:sanctum'])->prefix('teams')->group(function () {
 
-    // Get all teams
-    Route::get('/', [TeamsController::class, 'index']);
+    // Admin + Manager + Team Leader can view teams
+    Route::get('/', [TeamsController::class, 'index'])
+        ->middleware('role:admin,manager,team_leader');
 
-    // Create team
-    Route::post('/', [TeamsController::class, 'store']);
+    // View single team
+    Route::get('/{id}', [TeamsController::class, 'show'])
+        ->middleware('role:admin,manager,team_leader');
 
-    // Get single team
-    Route::get('/{id}', [TeamsController::class, 'show']);
+    // Only admin can create teams
+    Route::post('/', [TeamsController::class, 'store'])
+        ->middleware('role:admin');
 
-    // Update team
-    Route::put('/update/{id}', [TeamsController::class, 'update']);
+    // Only admin can update teams
+    Route::put('/update/{id}', [TeamsController::class, 'update'])
+        ->middleware('role:admin');
 
-    // Delete team
-    Route::delete('/delete/{id}', [TeamsController::class, 'destroy']);
+    // Only admin can delete teams
+    Route::delete('/delete/{id}', [TeamsController::class, 'destroy'])
+        ->middleware('role:admin');
 
-    // Assign members to a team.
-    Route::post('/add-members/{id}', [TeamsController::class, 'addMembers']);
+    // Admin + Manager can assign members
+    Route::post('/add-members/{id}', [TeamsController::class, 'addMembers'])
+        ->middleware('role:admin,manager');
 });

@@ -1,30 +1,30 @@
 <?php
-
+ 
 namespace App\Http\Controllers\Api\Notice;
-
+ 
 use App\Http\Controllers\Controller;
 use App\Models\Notice;
 use Illuminate\Support\Facades\Storage;
-
+ 
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
-
-
+ 
+ 
 use Illuminate\Http\Request;
-
+ 
 class NoticeController extends Controller
 {
-
-
+ 
+ 
     public function list()
-
+ 
     {
-
+ 
         $notices = Notice::orderBy('created_at', 'desc')->get();
-
+ 
         return response()->json(['data' => $notices]);
     }
-
+ 
     public function store(Request $request)
     {
         // dd($request->all());
@@ -40,8 +40,8 @@ class NoticeController extends Controller
             'notice_users.*.seen' => 'required|boolean',
             'notice_users.*.seen_at' => 'nullable|date',
             'notice_type' => 'required|in:private,public',
-
-
+ 
+ 
         ]);
         //     $test=;
         // print_r($test);
@@ -53,13 +53,13 @@ class NoticeController extends Controller
                 'errors'  => $validator->errors()
             ], 422);
         }
-
+ 
         // Handle Image Upload
         $imagePath = null;
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('notice', 'public');
         }
-
+ 
         $notice = Notice::create([
             'title' => $request->title,
             'description' => $request->description,
@@ -71,28 +71,19 @@ class NoticeController extends Controller
             'notice_users' => json_encode($request->notice_users),
             'notice_type' => $request->notice_type,
         ]);
-
+ 
         return response()->json([
             'success' => true,
             'message' => 'Notice created successfully',
             'data'    => $notice
         ], 201);
     }
-
-    public function edit($id)
-    {
-        $notice = Notice::findOrFail($id);
-
-        return response()->json([
-            'success' => true,
-            'data' => $notice
-        ]);
-    }
-
+ 
+ 
     public function update(Request $request, $id)
     {
         $notice = Notice::findOrFail($id);
-
+ 
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -106,7 +97,7 @@ class NoticeController extends Controller
             'notice_users.*.seen_at' => 'nullable|date',
             'notice_type' => 'required|in:private,public',
         ]);
-
+ 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
@@ -114,7 +105,7 @@ class NoticeController extends Controller
                 'errors'  => $validator->errors()
             ], 422);
         }
-
+ 
         $data = $request->only([
             'title',
             'description',
@@ -123,54 +114,54 @@ class NoticeController extends Controller
             'status',
             'notice_type',
         ]);
-
+ 
         // Image update
         if ($request->hasFile('image')) {
             if ($notice->image && Storage::disk('public')->exists($notice->image)) {
                 Storage::disk('public')->delete($notice->image);
             }
-
+ 
             $data['image'] = $request->file('image')->store('notice', 'public');
         }
-
+ 
         // notice_users update
         if ($request->has('notice_users')) {
             $data['notice_users'] = json_encode($request->notice_users);
         }
-
+ 
         $notice->update($data);
-
+ 
         return response()->json([
             'success' => true,
             'message' => 'Notice updated successfully',
             'data' => $notice
         ]);
     }
-
-
+ 
+ 
     public function destroy($id)
-
+ 
     {
-
+ 
         Notice::findOrFail($id)->delete();
-
+ 
         return response()->json(['message' => 'Notice deleted successfully']);
     }
-
-
+ 
+ 
     public function toggle($id)
-
+ 
     {
-
+ 
         $notice = Notice::findOrFail($id);
-
+ 
         $notice->status = $notice->status === 'active' ? 'inactive' : 'active';
-
+ 
         $notice->save();
-
+ 
         return response()->json(['message' => 'Notice status updated']);
     }
-
+ 
     public function getByType($notice_type)
     {
         // Validate allowed types
@@ -180,33 +171,50 @@ class NoticeController extends Controller
                 'message' => 'Invalid notice type'
             ], 400);
         }
-
+ 
         $notices = Notice::where('notice_type', $notice_type)
-
+ 
             ->get();
-
+ 
         return response()->json([
             'success' => true,
             'type' => $notice_type,
             'data' => $notices
         ]);
     }
-
+ 
     public function show($id)
     {
         $notice = Notice::getByIdSelected($id);
-
+       
+ 
         if (!$notice) {
             return response()->json([
                 'success' => false,
                 'message' => 'Notice not found'
             ], 404);
         }
-
+ 
         return response()->json([
             'success' => true,
             'data' => $notice,
             'image' => $notice->image ? asset('storage/' . $notice->image) : null,
+        ]);
+    }
+ 
+    public function ShowNotice()
+    {
+       
+        $publicNotices = Notice::where('notice_type', 'public')
+            ->where('status', 'active')
+            ->where(function ($query) {
+                $query->whereNull('expired_at')->orWhere('expired_at', '>=', now());
+            })
+            ->get();
+       
+        return response()->json([
+            'success' => true,
+            'notices' => $publicNotices
         ]);
     }
 }

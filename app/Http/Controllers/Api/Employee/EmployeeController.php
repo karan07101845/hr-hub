@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Imports\UsersImport;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\Notice;
+use App\Models\Attendance;
 
 
 
@@ -419,5 +421,35 @@ class EmployeeController extends Controller
         'success' => true,
         'message' => 'Document deleted successfully.'
     ]);
-}
+
+
+    }
+    
+    // dashboard Overview
+    
+    public function overview()
+    {
+        $user = Auth::user();
+
+        $latest = Attendance::where('user_id', $user->id)
+            ->latest('date')
+            ->first();
+
+        $attendance = ($latest && $latest->status === 'P') ? 'Present' : 'Absent';
+
+        $publicNotices = Notice::where('notice_type', 'public')
+            ->where('status', 'active')
+            ->where(function ($q) {
+                $q->whereNull('expired_at')
+                  ->orWhere('expired_at', '>=', now());
+            })
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'attendance' => $attendance,
+            'public_notices' => $publicNotices
+        ]);
+    }
 }
