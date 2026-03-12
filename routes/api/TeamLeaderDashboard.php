@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\TeamLeader\TeamLeaderDashboardController;
+use App\Http\Controllers\Api\TeamLeader\TeamLeaderController;
 use App\Http\Controllers\Api\Attendance\AttendanceController;
 use App\Http\Controllers\Api\Notice\NoticeController;
 use App\Http\Controllers\Api\Leaves\LeavesController;
@@ -11,7 +11,7 @@ Route::middleware(['auth:sanctum','role:team_leader'])
 ->prefix('team-leader')
 ->group(function () {
 
-    Route::get('/dashboard', [TeamLeaderDashboardController::class,'overview']);
+    Route::get('/dashboard', [TeamLeaderController::class,'overview']);
 
     // Attendance
     Route::get('/attendances/my-report', [AttendanceController::class,'myReport']);
@@ -22,6 +22,8 @@ Route::middleware(['auth:sanctum','role:team_leader'])
     // Leave
     Route::post('/leave/apply', [LeavesController::class,'apply']);
     Route::get('/leave/my', [LeavesController::class,'myLeaves']);
+
+    
 
 
 

@@ -1,6 +1,7 @@
 <?php
 // use Illuminate\Support\Facades\Route;
 use  App\Http\Controllers\Api\Auth\AuthController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->post('/auth/logout', [AuthController::class, 'logout']);
 

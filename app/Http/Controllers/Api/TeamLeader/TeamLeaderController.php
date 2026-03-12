@@ -4,19 +4,19 @@ namespace App\Http\Controllers\Api\TeamLeader;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use App\Models\user;
+use App\Models\User;
 use App\Models\Attendance;
 use App\Models\Leaves;
 use App\Models\Notice;
 use App\Models\Teams;
 
 
-class TeamLeaderDashboardController extends Controller
+class TeamLeaderController extends Controller
 {
 
     public function overview()
 {
-    $leader = auth()->user();
+    $leader = Auth::user();
 
     $teamMembers = User::where('team_id',$leader->team_id)
         ->where('role','employee')

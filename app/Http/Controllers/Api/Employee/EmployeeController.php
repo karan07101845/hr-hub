@@ -417,16 +417,172 @@ class EmployeeController extends Controller
         $user->document = $documents;
         $user->save();
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Document deleted successfully.'
-    ]);
-
-
+        return response()->json([
+            'success' => true,
+            'message' => 'Document deleted successfully.'
+        ]);
     }
-    
+
+    public function getAllProfiles()
+    {
+        $employees = User::all();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Employees fetched successfully',
+            'data' => $employees
+        ]);
+    }
+
+    public function updateProfile(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            // Basic Information
+            'name' => 'required|string|max:255',
+            'email' => 'nullable|email|max:255|unique:users,email,' . $id,
+            'emp_code' => 'nullable|string|max:50|unique:users,emp_code,' . $id,
+            'joining_date' => 'required|date|before_or_equal:today',
+            'designation' => 'nullable|string|max:255',
+            'password' => 'nullable|string|min:6|max:255',
+            'role' => 'required|in:admin,employee,manager,team_leader,sales',
+            'manager_id' => 'nullable|exists:users,id',
+            'team_id' => 'nullable|exists:teams,id',
+
+            // Image
+            'image' => 'nullable|image|max:2048',
+            'documents' => 'nullable|array',
+            'documents.*' => 'file|mimes:pdf,doc,docx,jpg,png|max:5120',
+            'aadhaar_number' => 'nullable|regex:/^\d{12}$/',
+            'pan_number' => 'nullable|regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/',
+
+            // Guardian Details
+            'father_name' => 'nullable|string|max:255',
+            'mother_name' => 'nullable|string|max:255',
+
+            // Experience Details
+            'years_of_experience' => 'nullable|numeric|min:0|max:70',
+            'training_experience' => 'nullable|string|max:1000',
+
+            // Previous Company Details
+            'previous_company_name' => 'nullable|string|max:255',
+            'previous_designation' => 'nullable|string|max:255',
+            'previous_company_duration' => 'nullable|numeric|min:0|max:70',
+        ]);
+
+        // Handle profile image
+        if ($request->hasFile('image')) {
+            if ($user->image && Storage::exists('public/' . $user->image)) {
+                Storage::delete('public/' . $user->image);
+            }
+            $validated['image'] = $request->file('image')->store('profile_images', 'public');
+        }
+
+        // Handle multi-document upload
+        // $filesData = $user->document ?? [];
+
+        if ($request->hasFile('documents')) {
+
+            foreach ($request->file('documents') as $file) {
+
+                $path = $file->store('employee-documents', 'public');
+
+                $filesData[] = [
+                    'doc_id' => rand(10000, 99999),
+                    'file_path' => $path,
+                    'original_name' => $file->getClientOriginalName(),
+                    'file_type' => $file->getClientMimeType(),
+                ];
+            }
+
+            $user->document = $filesData;
+        }
+
+        // Mass update
+        $user->fill($validated);
+        $user->save();
+
+        // Assign manager if role is employee
+        if ($validated['role'] === 'employee') {
+            $user->manager_id = $validated['manager_id'] ?? null;
+        } else {
+            // If not employee, remove manager
+            $user->manager_id = null;
+        }
+
+        $user->save();
+
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Employee updated successfully',
+            'user' => $user
+        ]);
+    }
+
+
+    public function myProfile()
+    {
+        $user = Auth::user();
+
+        return response()->json([
+            'success' => true,
+            'user' => $user
+        ]);
+    }
+
+    public function updateMyProfile(Request $request)
+    {
+        $user = User::user();
+
+        $validated = $request->validate([
+            'image' => 'nullable|image|max:2048',
+            'password' => 'nullable|string|min:6|confirmed'
+        ]);
+
+        // Update Image
+        if ($request->hasFile('image')) {
+
+            if ($user->image && Storage::exists('public/' . $user->image)) {
+                Storage::delete('public/' . $user->image);
+            }
+
+            $validated['image'] = $request->file('image')->store('profile_images', 'public');
+        }
+
+        // Update Password
+        if (!empty($validated['password'])) {
+            $validated['password'] = Hash::make($validated['password']);
+        } else {
+            unset($validated['password']);
+        }
+
+        $user->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated successfully',
+            'user' => $user
+        ]);
+    }
+
+    public function uploadUsers(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimetypes:text/csv,text/plain,application/vnd.ms-excel|max:2048'
+        ]);
+        Excel::import(new UsersImport, $request->file('file'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Users uploaded successfully'
+        ]);
+    }
+
+
     // dashboard Overview
-    
+
     public function overview()
     {
         $user = Auth::user();
@@ -441,7 +597,7 @@ class EmployeeController extends Controller
             ->where('status', 'active')
             ->where(function ($q) {
                 $q->whereNull('expired_at')
-                  ->orWhere('expired_at', '>=', now());
+                    ->orWhere('expired_at', '>=', now());
             })
             ->latest()
             ->get();
