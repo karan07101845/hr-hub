@@ -15,6 +15,7 @@ require __DIR__ . '/api/EmployeeDashboard.php';
 require __DIR__ . '/api/TeamLeaderDashboard.php';
 require __DIR__ . '/api/notification.php';
 require __DIR__ . '/api/manager.php';
+require __DIR__ . '/api/salesManager.php';
 
 
 
