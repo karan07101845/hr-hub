@@ -11,10 +11,13 @@ use App\Models\Notice;
 use App\Models\Teams;
 use Illuminate\Http\Request;
 use App\Models\TeamLeader;
+use Illuminate\Support\Facades\Hash;
 
 
 class TeamLeaderController extends Controller
 {
+
+    //Overview section
 
     public function overview()
     {
@@ -46,6 +49,8 @@ class TeamLeaderController extends Controller
             "public_notices" => $notices
         ]);
     }
+
+    //Teams section
 
     public function teamMembers()
     {
@@ -81,6 +86,8 @@ class TeamLeaderController extends Controller
     }
 
 
+    //Reviews Function
+
     public function addReview(Request $request)
     {
         $request->validate([
@@ -111,6 +118,112 @@ class TeamLeaderController extends Controller
         return response()->json([
             "success" => true,
             "data" => $reviews
+        ]);
+    }
+
+    public function deleteReview($id)
+    {
+        $review = TeamLeader::find($id);
+
+        if (!$review) {
+            return response()->json([
+                "success" => false,
+                "message" => "Review not found"
+            ]);
+        }
+
+        $review->delete();
+
+        return response()->json([
+            "success" => true,
+            "message" => "Review deleted"
+        ]);
+    }
+
+    public function updateReview(Request $request, $id)
+    {
+        $request->validate([
+            "performance" => "required",
+            "comment" => "required"
+        ]);
+
+        $review = TeamLeader::find($id);
+
+        if (!$review) {
+            return response()->json([
+                "success" => false,
+                "message" => "Review not found"
+            ]);
+        }
+
+        $review->update([
+            "performance" => $request->performance,
+            "comment" => $request->comment
+        ]);
+
+        return response()->json([
+            "success" => true,
+            "message" => "message upadted successfully",
+            "data" => $review
+        ]);
+    }
+
+    //Profile section
+
+    public function profile()
+    {
+        $user = Auth::user();
+
+        return response()->json([
+            "success" => true,
+            "data" => [
+                "id" => $user->id,
+                "name" => $user->name,
+                "email" => $user->email,
+                "role" => $user->role,
+                "designation" => $user->designation,
+                "emp_code" => $user->emp_code
+            ]
+        ]);
+    }
+
+    //Change password Function 
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            "current_password" => "required",
+            "new_password" => "required|min:6|confirmed"
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                "success" => false,
+                "message" => "Current password is incorrect"
+            ], 400);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            "success" => true,
+            "message" => "Password changed successfully"
+        ]);
+    }
+
+    public function logout()
+    {
+        $user = Auth::user();
+
+        $user->tokens()->delete();
+
+        return response()->json([
+            "success" => true,
+            "message" => "Logged out successfully"
         ]);
     }
 }

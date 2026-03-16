@@ -31,4 +31,14 @@ Route::middleware(['auth:sanctum', 'role:team_leader'])
         Route::get('/reviews', [TeamLeaderController::class, 'getReviews']);
         Route::post('/reviews/add', [TeamLeaderController::class, 'addReview']);
         Route::delete('/reviews/delete/{id}', [TeamLeaderController::class, 'deleteReview']);
+        Route::patch('/reviews/update/{id}', [TeamLeaderController::class, 'updateReview']);
+
+        //profile
+        Route::get('/profile', [TeamLeaderController::class, 'profile']);
+
+        // Change Password
+        Route::post('/change-password', [TeamLeaderController::class, 'changePassword']);
+
+        // Logout
+        Route::post('/logout', [TeamLeaderController::class, 'logout']);
     });
